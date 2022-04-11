@@ -61,7 +61,7 @@ void Game::Initialize(HWND window, int width, int height)
     // 入力レイアウトの作成
     DX::ThrowIfFailed(
         device->CreateInputLayout(
-            VertexPosition::InputElements, VertexPosition::InputElementCount,
+            VertexPositionColor::InputElements, VertexPositionColor::InputElementCount,
             m_vsBlob->GetBufferPointer(), m_vsBlob->GetBufferSize(),
             m_inputLayout.GetAddressOf()
         )
@@ -71,7 +71,7 @@ void Game::Initialize(HWND window, int width, int height)
     {
         D3D11_BUFFER_DESC desc = {};
 
-        desc.ByteWidth = sizeof(VertexPosition) * 4;
+        desc.ByteWidth = sizeof(VertexPositionColor) * 4;
         desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         desc.Usage = D3D11_USAGE_DYNAMIC;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -87,13 +87,16 @@ void Game::Initialize(HWND window, int width, int height)
         deviceContext->Map(m_vertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedVertices)
     );
 
-    // 三角形の頂点データ
-    VertexPosition vertices[4] =
+    // 頂点データ
+    VertexPositionColor vertices[4] =
     {
-        Vector3(-1.0f, 1.0f, 0.0f), Vector3(1.0f, 1.0f, 0.0f), Vector3(1.0f, -1.0f, 0.0f), Vector3(-1.0f, -1.0f, 0.0f),
+        { Vector3(-1.0f,  1.0f, 0.0f), Vector4(1.0f, 0.0f, 0.0f, 1.0f) },
+        { Vector3( 1.0f,  1.0f, 0.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f) },
+        { Vector3( 1.0f, -1.0f, 0.0f), Vector4(0.0f, 0.0f, 1.0f, 1.0f) },
+        { Vector3(-1.0f, -1.0f, 0.0f), Vector4(1.0f, 1.0f, 0.0f, 1.0f) },
     };
 
-    memcpy(mappedVertices.pData, vertices, sizeof(VertexPosition) * 4);
+    memcpy(mappedVertices.pData, vertices, sizeof(VertexPositionColor) * 4);
     deviceContext->Unmap(m_vertexBuffer.Get(), 0);
     //----------------------------//
     // 頂点データを設定（終）     //
@@ -235,7 +238,7 @@ void Game::Render()
     // 頂点バッファを設定する
     {
         auto vertexBuffer = m_vertexBuffer.Get();
-        UINT vertexStride = sizeof(VertexPosition);
+        UINT vertexStride = sizeof(VertexPositionColor);
         UINT vertexOffset = 0;
 
         deviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &vertexStride, &vertexOffset);
