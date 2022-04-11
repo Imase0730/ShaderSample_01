@@ -71,7 +71,7 @@ void Game::Initialize(HWND window, int width, int height)
     {
         D3D11_BUFFER_DESC desc = {};
 
-        desc.ByteWidth = sizeof(VertexPosition) * 3;
+        desc.ByteWidth = sizeof(VertexPosition) * 4;
         desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         desc.Usage = D3D11_USAGE_DYNAMIC;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -88,12 +88,12 @@ void Game::Initialize(HWND window, int width, int height)
     );
 
     // 三角形の頂点データ
-    VertexPosition vertices[3] =
+    VertexPosition vertices[4] =
     {
-        Vector3(0.0f,  1.0f, 0.0f), Vector3(1.0f, 0.0f, 0.0f), Vector3(-1.0f, 0.0f, 0.0f),
+        Vector3(-1.0f, 1.0f, 0.0f), Vector3(1.0f, 1.0f, 0.0f), Vector3(1.0f, -1.0f, 0.0f), Vector3(-1.0f, -1.0f, 0.0f),
     };
 
-    memcpy(mappedVertices.pData, vertices, sizeof(VertexPosition) * 3);
+    memcpy(mappedVertices.pData, vertices, sizeof(VertexPosition) * 4);
     deviceContext->Unmap(m_vertexBuffer.Get(), 0);
     //----------------------------//
     // 頂点データを設定（終）     //
@@ -103,7 +103,7 @@ void Game::Initialize(HWND window, int width, int height)
     {
         D3D11_BUFFER_DESC desc = {};
 
-        desc.ByteWidth = sizeof(uint16_t) * 3;
+        desc.ByteWidth = sizeof(uint16_t) * 6;
         desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
         desc.Usage = D3D11_USAGE_DYNAMIC;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -119,11 +119,15 @@ void Game::Initialize(HWND window, int width, int height)
         deviceContext->Map(m_indexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedIndices)
     );
 
-    uint16_t indices[] = { 0, 1, 2 };
+    uint16_t indices[] =
+    {
+        0, 1, 2,
+        0, 2, 3,
+    };
 
     auto outputIndices = static_cast<uint16_t*>(mappedIndices.pData);
 
-    for (size_t i = 0; i < 3; i++)
+    for (size_t i = 0; i < 6; i++)
     {
         outputIndices[i] = static_cast<uint16_t>(indices[i]);
     }
@@ -271,7 +275,7 @@ void Game::Render()
     deviceContext->OMSetDepthStencilState(m_states->DepthNone(), 0);
 
     // プリミティブの描画 
-    deviceContext->DrawIndexed(3, 0, 0);
+    deviceContext->DrawIndexed(6, 0, 0);
 
     m_deviceResources->PIXEndEvent();
 
