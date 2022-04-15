@@ -61,7 +61,7 @@ void Game::Initialize(HWND window, int width, int height)
     // 入力レイアウトの作成
     DX::ThrowIfFailed(
         device->CreateInputLayout(
-            VertexPositionColor::InputElements, VertexPositionColor::InputElementCount,
+            VertexPositionTexture::InputElements, VertexPositionTexture::InputElementCount,
             m_vsBlob->GetBufferPointer(), m_vsBlob->GetBufferSize(),
             m_inputLayout.GetAddressOf()
         )
@@ -71,7 +71,7 @@ void Game::Initialize(HWND window, int width, int height)
     {
         D3D11_BUFFER_DESC desc = {};
 
-        desc.ByteWidth = sizeof(VertexPositionColor) * 4;
+        desc.ByteWidth = sizeof(VertexPositionTexture) * 4;
         desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         desc.Usage = D3D11_USAGE_DYNAMIC;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -88,15 +88,15 @@ void Game::Initialize(HWND window, int width, int height)
     );
 
     // 頂点データ
-    VertexPositionColor vertices[4] =
+    VertexPositionTexture vertices[4] =
     {
-        { Vector3(-1.0f,  1.0f, 0.0f), Vector4(1.0f, 0.0f, 0.0f, 1.0f) },
-        { Vector3( 1.0f,  1.0f, 0.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f) },
-        { Vector3( 1.0f, -1.0f, 0.0f), Vector4(0.0f, 0.0f, 1.0f, 1.0f) },
-        { Vector3(-1.0f, -1.0f, 0.0f), Vector4(1.0f, 1.0f, 0.0f, 1.0f) },
+        { Vector3(-1.0f,  1.0f, 0.0f), Vector2(0.0f, 0.0f) },
+        { Vector3( 1.0f,  1.0f, 0.0f), Vector2(1.0f, 0.0f) },
+        { Vector3( 1.0f, -1.0f, 0.0f), Vector2(1.0f, 1.0f) },
+        { Vector3(-1.0f, -1.0f, 0.0f), Vector2(0.0f, 1.0f) },
     };
 
-    memcpy(mappedVertices.pData, vertices, sizeof(VertexPositionColor) * 4);
+    memcpy(mappedVertices.pData, vertices, sizeof(VertexPositionTexture) * 4);
     deviceContext->Unmap(m_vertexBuffer.Get(), 0);
     //----------------------------//
     // 頂点データを設定（終）     //
@@ -184,6 +184,12 @@ void Game::Initialize(HWND window, int width, int height)
     //----------------------------------//
     // 定数バッファを設定（終）         //
     //----------------------------------//
+
+    // テクスチャのロード
+    DX::ThrowIfFailed(
+        CreateDDSTextureFromFile(device, L"mario.dds", nullptr, m_texture.GetAddressOf())
+    );
+
 }
 
 #pragma region Frame Update
@@ -238,7 +244,7 @@ void Game::Render()
     // 頂点バッファを設定する
     {
         auto vertexBuffer = m_vertexBuffer.Get();
-        UINT vertexStride = sizeof(VertexPositionColor);
+        UINT vertexStride = sizeof(VertexPositionTexture);
         UINT vertexOffset = 0;
 
         deviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &vertexStride, &vertexOffset);
@@ -267,6 +273,14 @@ void Game::Render()
     //---------------------------------------------------------------------------------//
     // ピクセルシェーダーを設定する
     deviceContext->PSSetShader(m_pixelShader.Get(), nullptr, 0);
+
+    // テクスチャの設定
+    ID3D11ShaderResourceView* textures[1] = { m_texture.Get() };
+    deviceContext->PSSetShaderResources(0, 1, textures);
+
+    // サンプラーの設定
+    ID3D11SamplerState* samplerState = m_states->LinearWrap();
+    deviceContext->PSSetSamplers(0, 1, &samplerState);
 
     //---------------------------------------------------------------------------------//
     // Output Merger (OM)

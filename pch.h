@@ -89,6 +89,7 @@ namespace DX
 #include "DirectXHelpers.h"
 #include "CommonStates.h"
 #include "VertexTypes.h"
+#include "DDSTextureLoader.h"
 
 // シェーダーをロードするために必用なヘッダー
 #include <d3dcompiler.h>

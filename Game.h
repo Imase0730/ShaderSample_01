@@ -98,4 +98,7 @@ private:
     // 定数バッファ
     Microsoft::WRL::ComPtr<ID3D11Buffer> m_constantBuffer;
 
+    // テクスチャハンドル
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_texture;
+
 };
