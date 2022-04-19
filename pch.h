@@ -90,6 +90,7 @@ namespace DX
 #include "CommonStates.h"
 #include "VertexTypes.h"
 #include "DDSTextureLoader.h"
+#include "Mouse.h"
 
 // シェーダーをロードするために必用なヘッダー
 #include <d3dcompiler.h>

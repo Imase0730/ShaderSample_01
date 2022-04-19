@@ -8,12 +8,14 @@ cbuffer Transform : register(b0)
 struct VSInput
 {
 	float3 Position	: SV_Position;	// 位置
+	float4 Color	: COLOR;		// 色
 	float2 TexCoord	: TEXCOORD;		// テクスチャ座標
 };
 
 struct VSOutput
 {
 	float4 Position	: SV_POSITION;	// 位置
+	float4 Color	: COLOR;		// 色
 	float2 TexCoord	: TEXCOORD;		// テクスチャ座標
 };
 

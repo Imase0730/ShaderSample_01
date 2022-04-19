@@ -37,6 +37,10 @@ void Game::Initialize(HWND window, int width, int height)
     */
 
     //-----------------------------------------------------------------------------//
+
+    // デバッグカメラを作成
+    m_debugCamera = std::make_unique<DebugCamera>(width, height);
+
     // デバイスを取得する
     auto device = m_deviceResources->GetD3DDevice();
 
@@ -61,7 +65,7 @@ void Game::Initialize(HWND window, int width, int height)
     // 入力レイアウトの作成
     DX::ThrowIfFailed(
         device->CreateInputLayout(
-            VertexPositionTexture::InputElements, VertexPositionTexture::InputElementCount,
+            VertexPositionColorTexture::InputElements, VertexPositionColorTexture::InputElementCount,
             m_vsBlob->GetBufferPointer(), m_vsBlob->GetBufferSize(),
             m_inputLayout.GetAddressOf()
         )
@@ -71,7 +75,7 @@ void Game::Initialize(HWND window, int width, int height)
     {
         D3D11_BUFFER_DESC desc = {};
 
-        desc.ByteWidth = sizeof(VertexPositionTexture) * 4;
+        desc.ByteWidth = sizeof(VertexPositionColorTexture) * 4;
         desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         desc.Usage = D3D11_USAGE_DYNAMIC;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -88,15 +92,15 @@ void Game::Initialize(HWND window, int width, int height)
     );
 
     // 頂点データ
-    VertexPositionTexture vertices[4] =
+    VertexPositionColorTexture vertices[4] =
     {
-        { Vector3(-1.0f,  1.0f, 0.0f), Vector2(0.0f, 0.0f) },
-        { Vector3( 1.0f,  1.0f, 0.0f), Vector2(1.0f, 0.0f) },
-        { Vector3( 1.0f, -1.0f, 0.0f), Vector2(1.0f, 1.0f) },
-        { Vector3(-1.0f, -1.0f, 0.0f), Vector2(0.0f, 1.0f) },
+        { Vector3(-1.0f,  1.0f, 0.0f), Vector4(1.0f, 0.0f, 0.0f, 1.0f), Vector2(0.0f, 0.0f) },
+        { Vector3( 1.0f,  1.0f, 0.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f), Vector2(1.0f, 0.0f) },
+        { Vector3( 1.0f, -1.0f, 0.0f), Vector4(0.0f, 0.0f, 1.0f, 1.0f), Vector2(1.0f, 1.0f) },
+        { Vector3(-1.0f, -1.0f, 0.0f), Vector4(1.0f, 0.0f, 1.0f, 1.0f), Vector2(0.0f, 1.0f) },
     };
 
-    memcpy(mappedVertices.pData, vertices, sizeof(VertexPositionTexture) * 4);
+    memcpy(mappedVertices.pData, vertices, sizeof(VertexPositionColorTexture) * 4);
     deviceContext->Unmap(m_vertexBuffer.Get(), 0);
     //----------------------------//
     // 頂点データを設定（終）     //
@@ -149,42 +153,6 @@ void Game::Initialize(HWND window, int width, int height)
         DX::ThrowIfFailed(device->CreateBuffer(&desc, nullptr, m_constantBuffer.GetAddressOf()));
     }
 
-    // ワールド行列
-    Matrix world = Matrix::Identity;
-
-    // カメラの設定
-    Matrix view = Matrix::CreateLookAt(
-        Vector3(0.0f, 0.0f, 10.0f), // カメラの位置
-        Vector3(0.0f, 0.0f, 0.0f),  // カメラの見ている場所
-        Vector3::Up                 // カメラの上方向ベクトル
-    );
-
-    // 射影行列の設定
-    Matrix projection = Matrix::CreatePerspectiveFieldOfView(
-        XMConvertToRadians(45.0f),  // 画角
-        width / (float)height,      // アスペクト比
-        0.1f,                       // Nearクリップ面の位置
-        100.0f                      // Farクリップ面の位置
-    );
-
-    //----------------------------------//
-    // 定数バッファを設定               //
-    //----------------------------------//
-    {
-        D3D11_MAPPED_SUBRESOURCE mappedResource;
-        DX::ThrowIfFailed(
-            deviceContext->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource)
-        );
-
-        ConstantBuffer buffer = { world, view, projection };
-
-        *static_cast<ConstantBuffer*>(mappedResource.pData) = buffer;
-        deviceContext->Unmap(m_constantBuffer.Get(), 0);
-    }
-    //----------------------------------//
-    // 定数バッファを設定（終）         //
-    //----------------------------------//
-
     // テクスチャのロード
     DX::ThrowIfFailed(
         CreateDDSTextureFromFile(device, L"mario.dds", nullptr, m_texture.GetAddressOf())
@@ -211,6 +179,9 @@ void Game::Update(DX::StepTimer const& timer)
 
     // TODO: Add your game logic here.
     elapsedTime;
+
+    // デバッグ用カメラの更新
+    m_debugCamera->Update();
 }
 #pragma endregion
 
@@ -232,6 +203,41 @@ void Game::Render()
     auto deviceContext = m_deviceResources->GetD3DDeviceContext();
 
     // TODO: Add your rendering code here.
+
+    // ワールド行列
+    Matrix world = Matrix::Identity;
+
+    // カメラの設定
+    Matrix view = m_debugCamera->GetCameraMatrix();
+
+    // 射影行列の設定
+    int width, height;
+    GetDefaultSize(width, height);
+    Matrix projection = Matrix::CreatePerspectiveFieldOfView(
+        XMConvertToRadians(45.0f),  // 画角
+        width / (float)height,      // アスペクト比
+        0.1f,                       // Nearクリップ面の位置
+        100.0f                      // Farクリップ面の位置
+    );
+
+    //----------------------------------//
+    // 定数バッファを設定               //
+    //----------------------------------//
+    {
+        D3D11_MAPPED_SUBRESOURCE mappedResource;
+        DX::ThrowIfFailed(
+            deviceContext->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource)
+        );
+
+        ConstantBuffer buffer = { world, view, projection };
+
+        *static_cast<ConstantBuffer*>(mappedResource.pData) = buffer;
+        deviceContext->Unmap(m_constantBuffer.Get(), 0);
+    }
+    //----------------------------------//
+    // 定数バッファを設定（終）         //
+    //----------------------------------//
+
     //---------------------------------------------------------------------------------//
     // Input Assembler (IA)
     //---------------------------------------------------------------------------------//
@@ -244,7 +250,7 @@ void Game::Render()
     // 頂点バッファを設定する
     {
         auto vertexBuffer = m_vertexBuffer.Get();
-        UINT vertexStride = sizeof(VertexPositionTexture);
+        UINT vertexStride = sizeof(VertexPositionColorTexture);
         UINT vertexOffset = 0;
 
         deviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &vertexStride, &vertexOffset);

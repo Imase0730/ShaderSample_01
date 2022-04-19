@@ -6,6 +6,7 @@
 
 #include "DeviceResources.h"
 #include "StepTimer.h"
+#include "DebugCamera.h"
 
 
 // A basic game implementation that creates a D3D11 device and
@@ -62,6 +63,9 @@ private:
     //--------------------------------------------------------------------------------//
 
 private:
+
+    // デバッグ用カメラ
+    std::unique_ptr<DebugCamera> m_debugCamera;
 
     // コモンステート
     std::unique_ptr<DirectX::CommonStates> m_states;
