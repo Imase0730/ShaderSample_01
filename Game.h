@@ -7,7 +7,7 @@
 #include "DeviceResources.h"
 #include "StepTimer.h"
 #include "DebugCamera.h"
-
+#include "Model.h"
 
 // A basic game implementation that creates a D3D11 device and
 // provides a game loop.
@@ -104,5 +104,8 @@ private:
 
     // テクスチャハンドル
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_texture;
+
+    // モデル
+    std::unique_ptr<Model> m_model;
 
 };

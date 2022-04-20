@@ -2,5 +2,5 @@
 
 float4 main(VSOutput input) : SV_TARGET
 {
-	return ColorMap.Sample(ColorSmp, input.TexCoord) * input.Color;
+	return float4(1.0f, 1.0f, 1.0f, 1.0f);
 }

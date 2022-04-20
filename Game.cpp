@@ -44,9 +44,6 @@ void Game::Initialize(HWND window, int width, int height)
     // デバイスを取得する
     auto device = m_deviceResources->GetD3DDevice();
 
-    // デバイスコンテキストを取得する
-    auto deviceContext = m_deviceResources->GetD3DDeviceContext();
-
     // コモンステートの作成
     m_states = std::make_unique<CommonStates>(device);
 
@@ -65,83 +62,11 @@ void Game::Initialize(HWND window, int width, int height)
     // 入力レイアウトの作成
     DX::ThrowIfFailed(
         device->CreateInputLayout(
-            VertexPositionColorTexture::InputElements, VertexPositionColorTexture::InputElementCount,
+            VertexPosition::InputElements, VertexPosition::InputElementCount,
             m_vsBlob->GetBufferPointer(), m_vsBlob->GetBufferSize(),
             m_inputLayout.GetAddressOf()
         )
     );
-
-    // 頂点バッファの作成
-    {
-        D3D11_BUFFER_DESC desc = {};
-
-        desc.ByteWidth = sizeof(VertexPositionColorTexture) * 4;
-        desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-        desc.Usage = D3D11_USAGE_DYNAMIC;
-        desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        DX::ThrowIfFailed(device->CreateBuffer(&desc, nullptr, &m_vertexBuffer));
-    }
-
-    //--------------------------//
-    // 頂点データを設定         //
-    //--------------------------//
-    D3D11_MAPPED_SUBRESOURCE mappedVertices;
-    // 頂点情報を設定
-    DX::ThrowIfFailed(
-        deviceContext->Map(m_vertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedVertices)
-    );
-
-    // 頂点データ
-    VertexPositionColorTexture vertices[4] =
-    {
-        { Vector3(-1.0f,  1.0f, 0.0f), Vector4(1.0f, 0.0f, 0.0f, 1.0f), Vector2(0.0f, 0.0f) },
-        { Vector3( 1.0f,  1.0f, 0.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f), Vector2(1.0f, 0.0f) },
-        { Vector3( 1.0f, -1.0f, 0.0f), Vector4(0.0f, 0.0f, 1.0f, 1.0f), Vector2(1.0f, 1.0f) },
-        { Vector3(-1.0f, -1.0f, 0.0f), Vector4(1.0f, 0.0f, 1.0f, 1.0f), Vector2(0.0f, 1.0f) },
-    };
-
-    memcpy(mappedVertices.pData, vertices, sizeof(VertexPositionColorTexture) * 4);
-    deviceContext->Unmap(m_vertexBuffer.Get(), 0);
-    //----------------------------//
-    // 頂点データを設定（終）     //
-    //----------------------------//
-
-    // インデックスバッファの作成
-    {
-        D3D11_BUFFER_DESC desc = {};
-
-        desc.ByteWidth = sizeof(uint16_t) * 6;
-        desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-        desc.Usage = D3D11_USAGE_DYNAMIC;
-        desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        DX::ThrowIfFailed(device->CreateBuffer(&desc, nullptr, &m_indexBuffer));
-    }
-
-    //----------------------------------//
-    // インデックスデータを設定         //
-    //----------------------------------//
-    D3D11_MAPPED_SUBRESOURCE mappedIndices;
-    // インデックスを設定
-    DX::ThrowIfFailed(
-        deviceContext->Map(m_indexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedIndices)
-    );
-
-    uint16_t indices[] =
-    {
-        0, 1, 2,
-        0, 2, 3,
-    };
-
-    auto outputIndices = static_cast<uint16_t*>(mappedIndices.pData);
-
-    for (size_t i = 0; i < 6; i++)
-    {
-        outputIndices[i] = static_cast<uint16_t>(indices[i]);
-    }
-    deviceContext->Unmap(m_indexBuffer.Get(), 0);
-    //------------------------------------//
-    // インデックスデータを設定（終）     //
-    //------------------------------------//
 
     // 定数バッファの作成
     {
@@ -153,11 +78,8 @@ void Game::Initialize(HWND window, int width, int height)
         DX::ThrowIfFailed(device->CreateBuffer(&desc, nullptr, m_constantBuffer.GetAddressOf()));
     }
 
-    // テクスチャのロード
-    DX::ThrowIfFailed(
-        CreateDDSTextureFromFile(device, L"mario.dds", nullptr, m_texture.GetAddressOf())
-    );
-
+    // モデルデータのロードと作成
+    m_model = Model::CreateFromObj(device, L"box.obj");
 }
 
 #pragma region Frame Update
@@ -247,19 +169,7 @@ void Game::Render()
     // プリミティブの種類を設定する
     deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    // 頂点バッファを設定する
-    {
-        auto vertexBuffer = m_vertexBuffer.Get();
-        UINT vertexStride = sizeof(VertexPositionColorTexture);
-        UINT vertexOffset = 0;
-
-        deviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &vertexStride, &vertexOffset);
-    }
-
-    // インデックスバッファを設定する
-    deviceContext->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
-
-    //---------------------------------------------------------------------------------//
+     //---------------------------------------------------------------------------------//
     // Vertex Shader (VS)
     //---------------------------------------------------------------------------------//
     // 頂点シェーダーを設定する
@@ -280,14 +190,6 @@ void Game::Render()
     // ピクセルシェーダーを設定する
     deviceContext->PSSetShader(m_pixelShader.Get(), nullptr, 0);
 
-    // テクスチャの設定
-    ID3D11ShaderResourceView* textures[1] = { m_texture.Get() };
-    deviceContext->PSSetShaderResources(0, 1, textures);
-
-    // サンプラーの設定
-    ID3D11SamplerState* samplerState = m_states->LinearWrap();
-    deviceContext->PSSetSamplers(0, 1, &samplerState);
-
     //---------------------------------------------------------------------------------//
     // Output Merger (OM)
     //---------------------------------------------------------------------------------//
@@ -297,8 +199,8 @@ void Game::Render()
     // 深度バッファの設定
     deviceContext->OMSetDepthStencilState(m_states->DepthNone(), 0);
 
-    // プリミティブの描画 
-    deviceContext->DrawIndexed(6, 0, 0);
+    // モデルの描画
+    m_model->Draw(deviceContext);
 
     m_deviceResources->PIXEndEvent();
 
