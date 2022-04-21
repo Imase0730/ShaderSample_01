@@ -14,7 +14,7 @@ Model::Model()
 
 std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t* szFileName)
 {
-	char szBuffer[3][32];
+	char szBuffer[3][256];
 	XMFLOAT3 f3;
 	std::vector<XMFLOAT3> vertex;
 	std::vector<uint16_t> index;
@@ -28,8 +28,15 @@ std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t*
 	// １行読み込み
 	while (std::getline(ifs, str))
 	{
+		// マテリアルファイル名
+		if (sscanf_s(str.data(), "mtllib %s", szBuffer[0], (unsigned int)sizeof(szBuffer[0])) == 1)
+		{
+			model->m_materials.push_back(GetMaterial(device, szBuffer[0]));
+			continue;
+		}
+
 		// 頂点データ
-		if (sscanf_s(str.data(), "v  %f %f %f", &f3.x, &f3.y, &f3.z) > 0)
+		if (sscanf_s(str.data(), "v  %f %f %f", &f3.x, &f3.y, &f3.z) == 3)
 		{
 			vertex.push_back(f3);
 			continue;
@@ -131,4 +138,48 @@ void Model::Draw(ID3D11DeviceContext* context)
 
 	// プリミティブの描画 
 	context->DrawIndexed(m_indexCount, 0, 0);
+}
+
+std::unique_ptr<Model::Material> Model::GetMaterial(ID3D11Device* device, const char* szFileName)
+{
+	char szBuffer[MAX_PATH];
+	std::string str;
+
+	// モデル管理オブジェクトを作成
+	auto material = std::make_unique<Model::Material>();
+
+	std::ifstream ifs(szFileName);
+
+	// １行読み込み
+	while (std::getline(ifs, str))
+	{
+		// マテリアル名
+		if (sscanf_s(str.data(), "newmtl %s", szBuffer, (unsigned int)sizeof(szBuffer)) == 1)
+		{
+			szBuffer[MAX_PATH - 1] = '\0';
+			material->name = szBuffer;
+			continue;
+		}
+
+		// テクスチャファイル名
+		if (sscanf_s(str.data(), "map_Kd %s", szBuffer, (unsigned int)sizeof(szBuffer)) == 1)
+		{
+			szBuffer[MAX_PATH - 1] = '\0';
+			str = szBuffer;
+			size_t pos = str.rfind('\\');
+			if (pos != std::string::npos) {
+				// ファイル名を取り出す
+				str = str.substr(pos + 1, str.size() - pos - 1);
+				// ファイル名をワイド文字に変換する
+				wchar_t buffer[256];
+				MultiByteToWideChar(CP_OEMCP, 0, str.c_str(), -1, buffer, sizeof(buffer) / sizeof(wchar_t));
+				// GPU側にテクスチャリソースを作成する
+				CreateWICTextureFromFile(device, buffer, nullptr, material->texture.GetAddressOf());
+			}
+		}
+	}
+
+	ifs.close();
+
+	return material;
 }

@@ -91,6 +91,7 @@ namespace DX
 #include "VertexTypes.h"
 #include "DDSTextureLoader.h"
 #include "Mouse.h"
+#include "WICTextureLoader.h"
 
 // シェーダーをロードするために必用なヘッダー
 #include <d3dcompiler.h>

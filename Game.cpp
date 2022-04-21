@@ -79,7 +79,7 @@ void Game::Initialize(HWND window, int width, int height)
     }
 
     // モデルデータのロードと作成
-    m_model = Model::CreateFromObj(device, L"box.obj");
+    m_model = Model::CreateFromObj(device, L"Dice.obj");
 }
 
 #pragma region Frame Update
