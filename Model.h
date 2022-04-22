@@ -4,6 +4,16 @@
 
 class Model
 {
+
+private:
+
+	// インデックス情報
+	struct Index
+	{
+		uint16_t v_idx;	// 頂点
+		uint16_t t_idx;	// テクスチャ座標
+	};
+
 public:
 
 	struct Material
@@ -38,7 +48,7 @@ public:
 	static std::unique_ptr<Model> CreateFromObj(ID3D11Device* device, const wchar_t* szFileName);
 	
 	// 描画関数
-	void Draw(ID3D11DeviceContext* context);
+	void Draw(ID3D11DeviceContext* contextconst, DirectX::CommonStates& states);
 
 	// マテリアルファイルからマテリアル情報を取得する関数
 	static std::unique_ptr<Model::Material> GetMaterial(ID3D11Device* device, const char* szFileName);

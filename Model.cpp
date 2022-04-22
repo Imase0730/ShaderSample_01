@@ -16,8 +16,10 @@ std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t*
 {
 	char szBuffer[3][256];
 	XMFLOAT3 f3;
+	XMFLOAT2 f2;
 	std::vector<XMFLOAT3> vertex;
-	std::vector<uint16_t> index;
+	std::vector<XMFLOAT2> texCoord;
+	std::vector<Index> index;
 	std::string str;
 
 	// モデル管理オブジェクトを作成
@@ -36,9 +38,18 @@ std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t*
 		}
 
 		// 頂点データ
-		if (sscanf_s(str.data(), "v  %f %f %f", &f3.x, &f3.y, &f3.z) == 3)
+		if (sscanf_s(str.data(), "v %f %f %f", &f3.x, &f3.y, &f3.z) == 3)
 		{
 			vertex.push_back(f3);
+			continue;
+		}
+
+		// テクスチャ座標
+		if (sscanf_s(str.data(), "vt %f %f", &f2.x, &f2.y) == 2)
+		{
+			// DirectXのUV座標系へ変換する（左下原点→左上原点）
+			f2.y = 1.0f - f2.y;
+			texCoord.push_back(f2);
 			continue;
 		}
 
@@ -48,12 +59,13 @@ std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t*
 			// 各頂点のインデックス番号を格納
 			for (size_t i = 0; i < 3; i++)
 			{
-				uint16_t v_idx;
-				if (sscanf_s(szBuffer[i], "%hu", &v_idx) == 1)
+				Index idx;
+				if (sscanf_s(szBuffer[i], "%hu/%hu", &idx.v_idx, &idx.t_idx) == 2)
 				{
 					// インデックスの番号を０スタートへ修正する
-					v_idx--;
-					index.push_back(v_idx);
+					idx.v_idx--;
+					idx.t_idx--;
+					index.push_back(idx);
 				}
 			}
 		}
@@ -66,18 +78,19 @@ std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t*
 
 	// 頂点バッファの作成
 	{
-		size_t size = vertex.size();
+		size_t size = index.size();
 
-		VertexPosition* p = new VertexPosition[size];
+		VertexPositionTexture* p = new VertexPositionTexture[size];
 
 		for (size_t i = 0; i < size; i++)
 		{
-			p[i].position = vertex[i];
+			p[i].position = vertex[index[i].v_idx];
+			p[i].textureCoordinate = texCoord[index[i].t_idx];
 		}
 
 		D3D11_BUFFER_DESC desc = {};
 
-		desc.ByteWidth = (UINT)(sizeof(VertexPosition) * size);
+		desc.ByteWidth = (UINT)(sizeof(VertexPositionTexture) * size);
 		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		desc.Usage = D3D11_USAGE_DYNAMIC;
 		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -97,9 +110,9 @@ std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t*
 		size_t size = index.size();
 		uint16_t* p = new uint16_t[size];
 
-		for (size_t i = 0; i < size; i++)
+		for (uint16_t i = 0; i < size; i++)
 		{
-			p[i] = index[i];
+			p[i] = i;
 		}
 
 		D3D11_BUFFER_DESC desc = {};
@@ -122,12 +135,20 @@ std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t*
     return model;
 }
 
-void Model::Draw(ID3D11DeviceContext* context)
+void Model::Draw(ID3D11DeviceContext* context, DirectX::CommonStates& states)
 {
+	// テクスチャの設定
+	ID3D11ShaderResourceView* textures[1] = { m_materials[0].get()->texture.Get() };
+	context->PSSetShaderResources(0, 1, textures);
+
+	// サンプラーの設定
+	ID3D11SamplerState* samplerState = states.LinearWrap();
+	context->PSSetSamplers(0, 1, &samplerState);
+
 	// 頂点バッファを設定する
 	{
 		auto vertexBuffer = m_vertexBuffer.Get();
-		UINT vertexStride = sizeof(VertexPosition);
+		UINT vertexStride = sizeof(VertexPositionTexture);
 		UINT vertexOffset = 0;
 
 		context->IASetVertexBuffers(0, 1, &vertexBuffer, &vertexStride, &vertexOffset);

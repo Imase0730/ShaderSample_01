@@ -10,6 +10,7 @@ VSOutput main(VSInput input)
 	float4 projPos = mul(Projection, viewPos);
 
 	output.Position = projPos;
+	output.TexCoord = input.TexCoord;
 
 	return output;
 }

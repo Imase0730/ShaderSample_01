@@ -62,7 +62,7 @@ void Game::Initialize(HWND window, int width, int height)
     // 入力レイアウトの作成
     DX::ThrowIfFailed(
         device->CreateInputLayout(
-            VertexPosition::InputElements, VertexPosition::InputElementCount,
+            VertexPositionTexture::InputElements, VertexPositionTexture::InputElementCount,
             m_vsBlob->GetBufferPointer(), m_vsBlob->GetBufferSize(),
             m_inputLayout.GetAddressOf()
         )
@@ -182,7 +182,7 @@ void Game::Render()
     // Rasterizer (RS)
     //---------------------------------------------------------------------------------//
     // カリングモードの設定
-    deviceContext->RSSetState(m_states->CullNone());
+    deviceContext->RSSetState(m_states->CullClockwise());
 
     //---------------------------------------------------------------------------------//
     // Pixel Shader (PS)
@@ -197,10 +197,10 @@ void Game::Render()
     deviceContext->OMSetBlendState(m_states->Opaque(), nullptr, 0xFFFFFFFF);
 
     // 深度バッファの設定
-    deviceContext->OMSetDepthStencilState(m_states->DepthNone(), 0);
+    deviceContext->OMSetDepthStencilState(m_states->DepthDefault(), 0);
 
     // モデルの描画
-    m_model->Draw(deviceContext);
+    m_model->Draw(deviceContext, *m_states.get());
 
     m_deviceResources->PIXEndEvent();
 
