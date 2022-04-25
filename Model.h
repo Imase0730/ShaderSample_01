@@ -16,6 +16,7 @@ private:
 
 public:
 
+	// マテリアル情報
 	struct Material
 	{
 		// マテリアル名

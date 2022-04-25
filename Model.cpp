@@ -102,7 +102,7 @@ std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t*
 
 		DX::ThrowIfFailed(device->CreateBuffer(&desc, &subData, &model->m_vertexBuffer));
 
-		delete[] p;
+		delete [] p;
 	}
 
 	// インデックスバッファの作成
@@ -129,7 +129,7 @@ std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t*
 
 		DX::ThrowIfFailed(device->CreateBuffer(&desc, &subData, &model->m_indexBuffer));
 
-		delete[] p;
+		delete [] p;
 	}
 
     return model;
@@ -195,7 +195,7 @@ std::unique_ptr<Model::Material> Model::GetMaterial(ID3D11Device* device, const 
 				wchar_t buffer[256];
 				MultiByteToWideChar(CP_OEMCP, 0, str.c_str(), -1, buffer, sizeof(buffer) / sizeof(wchar_t));
 				// GPU側にテクスチャリソースを作成する
-				CreateWICTextureFromFile(device, buffer, nullptr, material->texture.GetAddressOf());
+				DX::ThrowIfFailed(CreateWICTextureFromFile(device, buffer, nullptr, material->texture.GetAddressOf()));
 			}
 		}
 	}
