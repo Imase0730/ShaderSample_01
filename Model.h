@@ -12,6 +12,7 @@ private:
 	{
 		uint16_t v_idx;	// 頂点
 		uint16_t t_idx;	// テクスチャ座標
+		uint16_t n_idx;	// 法線
 	};
 
 public:

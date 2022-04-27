@@ -94,9 +94,10 @@ private:
     // 定数バッファの構造体の定義
     struct ConstantBuffer
     {
-        DirectX::SimpleMath::Matrix World;       // ワールド行列
-        DirectX::SimpleMath::Matrix View;        // ビュー行列
-        DirectX::SimpleMath::Matrix Projection;  // 射影行列
+        DirectX::SimpleMath::Matrix World;      // ワールド行列
+        DirectX::SimpleMath::Matrix View;       // ビュー行列
+        DirectX::SimpleMath::Matrix Projection; // 射影行列
+        DirectX::SimpleMath::Vector3 LightDir;  // ライトの方向
     };
 
     // 定数バッファ

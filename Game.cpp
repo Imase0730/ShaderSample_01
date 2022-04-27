@@ -62,7 +62,7 @@ void Game::Initialize(HWND window, int width, int height)
     // 入力レイアウトの作成
     DX::ThrowIfFailed(
         device->CreateInputLayout(
-            VertexPositionTexture::InputElements, VertexPositionTexture::InputElementCount,
+            VertexPositionNormalTexture::InputElements, VertexPositionNormalTexture::InputElementCount,
             m_vsBlob->GetBufferPointer(), m_vsBlob->GetBufferSize(),
             m_inputLayout.GetAddressOf()
         )
@@ -71,7 +71,10 @@ void Game::Initialize(HWND window, int width, int height)
     // 定数バッファの作成
     {
         D3D11_BUFFER_DESC desc = {};
-        desc.ByteWidth = sizeof(ConstantBuffer);
+        // バッファサイズは１６の倍数でないといけない
+        size_t size = sizeof(ConstantBuffer);
+        if (size % 16) size++;
+        desc.ByteWidth = size * 16;
         desc.Usage = D3D11_USAGE_DYNAMIC;
         desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -126,8 +129,14 @@ void Game::Render()
 
     // TODO: Add your rendering code here.
 
+    static float rotate = 0.0f;
+
+    rotate += 1.0f;
+
+    Matrix world = Matrix::CreateRotationY(XMConvertToRadians(rotate));
+
     // ワールド行列
-    Matrix world = Matrix::Identity;
+//    Matrix world = Matrix::Identity;
 
     // カメラの設定
     Matrix view = m_debugCamera->GetCameraMatrix();
@@ -151,7 +160,10 @@ void Game::Render()
             deviceContext->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource)
         );
 
-        ConstantBuffer buffer = { world, view, projection };
+        Vector3 light(1, 1, 0);
+        light.Normalize();
+
+        ConstantBuffer buffer = { world, view, projection, light };
 
         *static_cast<ConstantBuffer*>(mappedResource.pData) = buffer;
         deviceContext->Unmap(m_constantBuffer.Get(), 0);

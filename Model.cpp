@@ -18,6 +18,7 @@ std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t*
 	XMFLOAT3 f3;
 	XMFLOAT2 f2;
 	std::vector<XMFLOAT3> vertex;
+	std::vector<XMFLOAT3> normal;
 	std::vector<XMFLOAT2> texCoord;
 	std::vector<Index> index;
 	std::string str;
@@ -44,6 +45,13 @@ std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t*
 			continue;
 		}
 
+		// 法線データ
+		if (sscanf_s(str.data(), "vn %f %f %f", &f3.x, &f3.y, &f3.z) == 3)
+		{
+			normal.push_back(f3);
+			continue;
+		}
+
 		// テクスチャ座標
 		if (sscanf_s(str.data(), "vt %f %f", &f2.x, &f2.y) == 2)
 		{
@@ -60,11 +68,12 @@ std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t*
 			for (size_t i = 0; i < 3; i++)
 			{
 				Index idx;
-				if (sscanf_s(szBuffer[i], "%hu/%hu", &idx.v_idx, &idx.t_idx) == 2)
+				if (sscanf_s(szBuffer[i], "%hu/%hu/%hu", &idx.v_idx, &idx.t_idx, &idx.n_idx) == 3)
 				{
 					// インデックスの番号を０スタートへ修正する
 					idx.v_idx--;
 					idx.t_idx--;
+					idx.n_idx--;
 					index.push_back(idx);
 				}
 			}
@@ -80,17 +89,18 @@ std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t*
 	{
 		size_t size = index.size();
 
-		VertexPositionTexture* p = new VertexPositionTexture[size];
+		VertexPositionNormalTexture* p = new VertexPositionNormalTexture[size];
 
 		for (size_t i = 0; i < size; i++)
 		{
 			p[i].position = vertex[index[i].v_idx];
 			p[i].textureCoordinate = texCoord[index[i].t_idx];
+			p[i].normal = normal[index[i].n_idx];
 		}
 
 		D3D11_BUFFER_DESC desc = {};
 
-		desc.ByteWidth = (UINT)(sizeof(VertexPositionTexture) * size);
+		desc.ByteWidth = (UINT)(sizeof(VertexPositionNormalTexture) * size);
 		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		desc.Usage = D3D11_USAGE_DYNAMIC;
 		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -148,7 +158,7 @@ void Model::Draw(ID3D11DeviceContext* context, DirectX::CommonStates& states)
 	// 頂点バッファを設定する
 	{
 		auto vertexBuffer = m_vertexBuffer.Get();
-		UINT vertexStride = sizeof(VertexPositionTexture);
+		UINT vertexStride = sizeof(VertexPositionNormalTexture);
 		UINT vertexOffset = 0;
 
 		context->IASetVertexBuffers(0, 1, &vertexBuffer, &vertexStride, &vertexOffset);
@@ -191,12 +201,12 @@ std::unique_ptr<Model::Material> Model::GetMaterial(ID3D11Device* device, const 
 			if (pos != std::string::npos) {
 				// ファイル名を取り出す
 				str = str.substr(pos + 1, str.size() - pos - 1);
-				// ファイル名をワイド文字に変換する
-				wchar_t buffer[256];
-				MultiByteToWideChar(CP_OEMCP, 0, str.c_str(), -1, buffer, sizeof(buffer) / sizeof(wchar_t));
-				// GPU側にテクスチャリソースを作成する
-				DX::ThrowIfFailed(CreateWICTextureFromFile(device, buffer, nullptr, material->texture.GetAddressOf()));
 			}
+			// ファイル名をワイド文字に変換する
+			wchar_t buffer[256];
+			MultiByteToWideChar(CP_OEMCP, 0, str.c_str(), -1, buffer, sizeof(buffer) / sizeof(wchar_t));
+			// GPU側にテクスチャリソースを作成する
+			DX::ThrowIfFailed(CreateWICTextureFromFile(device, buffer, nullptr, material->texture.GetAddressOf()));
 		}
 	}
 
