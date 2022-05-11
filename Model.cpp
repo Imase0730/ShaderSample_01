@@ -83,7 +83,7 @@ std::unique_ptr<Model> Model::CreateFromObj(ID3D11Device* device, const wchar_t*
 	ifs.close();
 
 	// モデルの頂点数
-	model->m_indexCount = index.size();
+	model->m_indexCount = static_cast<UINT>(index.size());
 
 	// 頂点バッファの作成
 	{

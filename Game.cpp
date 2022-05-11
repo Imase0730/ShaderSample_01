@@ -74,7 +74,7 @@ void Game::Initialize(HWND window, int width, int height)
         // バッファサイズは１６の倍数でないといけない
         size_t size = sizeof(ConstantBuffer);
         if (size % 16) size++;
-        desc.ByteWidth = size * 16;
+        desc.ByteWidth = static_cast<UINT>(size * 16);
         desc.Usage = D3D11_USAGE_DYNAMIC;
         desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -129,14 +129,8 @@ void Game::Render()
 
     // TODO: Add your rendering code here.
 
-    static float rotate = 0.0f;
-
-    rotate += 1.0f;
-
-    Matrix world = Matrix::CreateRotationY(XMConvertToRadians(rotate));
-
     // ワールド行列
-//    Matrix world = Matrix::Identity;
+    Matrix world = Matrix::Identity;
 
     // カメラの設定
     Matrix view = m_debugCamera->GetCameraMatrix();
@@ -160,7 +154,8 @@ void Game::Render()
             deviceContext->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource)
         );
 
-        Vector3 light(1, 1, 0);
+        // ライト方向
+        Vector3 light(1.0f, 0.8f, 0.5f);
         light.Normalize();
 
         ConstantBuffer buffer = { world, view, projection, light };
